@@ -1,0 +1,38 @@
+---
+# One replica. Hydra creates a separate deployment from this file per provider.
+# ${HYDRA_DOMAIN} is replaced at deploy time so each provider accepts the domain.
+version: "2.0"
+
+services:
+  web:
+    image: nginx:1.27-alpine
+    expose:
+      - port: 80
+        as: 80
+        accept:
+          - ${HYDRA_DOMAIN}
+        to:
+          - global: true
+
+profiles:
+  compute:
+    web:
+      resources:
+        cpu:
+          units: 0.5
+        memory:
+          size: 512Mi
+        storage:
+          size: 1Gi
+  placement:
+    dcloud:
+      pricing:
+        web:
+          denom: uact
+          amount: 10000
+
+deployment:
+  web:
+    dcloud:
+      profile: web
+      count: 1

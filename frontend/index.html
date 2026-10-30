@@ -1,0 +1,265 @@
+<title>Hydra Control Room</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<style>
+/* Layout: a control-room strip of live numbers, then one card per replica, then history. */
+:root {
+  --bg: #eef2f3; --panel: #fbfdfd; --line: #d2dcdf; --fg: #13262c; --muted: #566b72;
+  --accent: #5b3fd6; --accent-fg: #ffffff;
+  --good: #0f7a55; --good-bg: #dcf2e8; --warn: #9a6200; --warn-bg: #fbeed2;
+  --bad: #bb2d3b; --bad-bg: #fbe2e4;
+  --display: "Bricolage Grotesque", "Avenir Next", system-ui, sans-serif;
+  --body: "IBM Plex Sans", system-ui, sans-serif;
+  --mono: "IBM Plex Mono", ui-monospace, Menlo, monospace;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #0e1619; --panel: #162126; --line: #2a3a41; --fg: #e6eff1; --muted: #92a6ad;
+  --accent: #a493ff; --accent-fg: #15102e;
+  --good: #58d3a2; --good-bg: #143429; --warn: #efbb5c; --warn-bg: #3a2c10;
+  --bad: #ff8a93; --bad-bg: #40191e; color-scheme: dark;
+} }
+:root[data-theme="dark"] {
+  --bg: #0e1619; --panel: #162126; --line: #2a3a41; --fg: #e6eff1; --muted: #92a6ad;
+  --accent: #a493ff; --accent-fg: #15102e;
+  --good: #58d3a2; --good-bg: #143429; --warn: #efbb5c; --warn-bg: #3a2c10;
+  --bad: #ff8a93; --bad-bg: #40191e; color-scheme: dark;
+}
+body { background: var(--bg); color: var(--fg); font-family: var(--body); line-height: 1.45; }
+.wrap { max-width: 1120px; margin: 0 auto; padding-block: 24px 48px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px));
+  display: grid; gap: 28px; }
+header { display: flex; flex-wrap: wrap; gap: 12px 24px; align-items: center; justify-content: space-between; }
+h1 { font: 700 2rem/1.1 var(--display); margin: 0; }
+h2 { font: 500 1.15rem/1.2 var(--display); margin: 0 0 12px; }
+.sub { color: var(--muted); margin: 4px 0 0; font-size: .92rem; }
+.chip { font: 500 .72rem var(--mono); border: 1px solid var(--line); border-radius: 4px; padding: 2px 6px; color: var(--muted); margin-left: 8px; vertical-align: middle; white-space: nowrap; }
+button { font: 600 .9rem var(--body); border-radius: 6px; cursor: pointer; }
+button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.primary { background: var(--accent); color: var(--accent-fg); border: 0; padding: 10px 18px; }
+.primary:hover { filter: brightness(1.1); }
+.ghost { background: none; border: 1px solid var(--line); color: var(--muted); padding: 4px 10px; font-size: .8rem; }
+.ghost:hover { border-color: var(--bad); color: var(--bad); }
+.route { font: 400 .9rem var(--mono); overflow-wrap: anywhere; border-block: 1px solid var(--line); padding-block: 10px; }
+.route b { font-weight: 500; color: var(--accent); }
+.stats { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 16px; margin: 0; }
+.stats div { min-width: 0; }
+.stats dt { color: var(--muted); font-size: .8rem; }
+.stats dd { margin: 2px 0 0; font: 700 1.7rem/1.2 var(--display); font-variant-numeric: tabular-nums; }
+.stats small { font: 400 .8rem var(--body); color: var(--muted); }
+.cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 280px), 1fr)); gap: 16px; }
+.card { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 14px; display: grid; gap: 10px; min-width: 0; }
+.card.live { border-color: var(--accent); }
+.card.suspect { border-color: var(--warn); }
+.card.dead { border-color: var(--bad); }
+.top { display: flex; justify-content: space-between; gap: 8px; align-items: center; }
+.name { font: 500 1.1rem var(--display); overflow-wrap: anywhere; }
+.pill { font: 500 .74rem var(--mono); padding: 2px 8px; border-radius: 99px; background: var(--line); color: var(--muted); }
+.pill.healthy { background: var(--good-bg); color: var(--good); }
+.pill.suspect { background: var(--warn-bg); color: var(--warn); }
+.pill.dead { background: var(--bad-bg); color: var(--bad); }
+.kv { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 2px 12px; margin: 0; font-size: .85rem; }
+.kv dt { color: var(--muted); }
+.kv dd { margin: 0; font-family: var(--mono); overflow-wrap: anywhere; text-align: right; }
+.pips { display: inline-flex; gap: 4px; align-items: center; }
+.pips i { width: 12px; height: 12px; border-radius: 2px; background: var(--line); }
+.pips i.on { background: var(--bad); }
+.foot { display: flex; justify-content: space-between; align-items: center; gap: 8px; font-size: .8rem; color: var(--muted); }
+.traffic { color: var(--accent); font-weight: 600; }
+.lower { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.1fr); gap: 28px; }
+.log { list-style: none; margin: 0; padding: 0; max-height: 340px; overflow-y: auto; font-size: .86rem; }
+.log li { display: grid; grid-template-columns: 4.6em 1fr; gap: 8px; padding: 5px 0; border-bottom: 1px solid var(--line); }
+.log time { font-family: var(--mono); color: var(--muted); font-size: .76rem; padding-top: 2px; font-variant-numeric: tabular-nums; }
+.log span { min-width: 0; overflow-wrap: anywhere; }
+.log .bad { color: var(--bad); } .log .warn { color: var(--warn); } .log .good { color: var(--good); }
+.table { overflow-x: auto; }
+table { width: 100%; border-collapse: collapse; font-size: .85rem; }
+th { text-align: right; font-weight: 500; color: var(--muted); padding: 4px 8px; font-size: .78rem; }
+td { text-align: right; padding: 6px 8px; border-top: 1px solid var(--line); font: 400 .82rem var(--mono); font-variant-numeric: tabular-nums; }
+th:first-child, td:first-child { text-align: left; padding-left: 0; }
+.notice { background: var(--warn-bg); color: var(--warn); padding: 8px 12px; border-radius: 6px; font-size: .88rem; }
+@media (max-width: 760px) { .stats { grid-template-columns: repeat(2, minmax(0, 1fr)); } .lower { grid-template-columns: minmax(0, 1fr); } }
+@media (prefers-reduced-motion: no-preference) { .card { transition: border-color .3s; } }
+</style>
+
+<main class="wrap">
+  <header>
+    <div>
+      <h1>Hydra <span class="chip" id="mode">connecting</span></h1>
+      <p class="sub">Replicas on separate Akash providers. Three failed checks and a replica is replaced.</p>
+    </div>
+    <button class="primary" id="action">Chaos: kill a replica</button>
+  </header>
+  <p class="notice" id="notice" hidden></p>
+  <div class="route" id="route"></div>
+  <dl class="stats" id="stats"></dl>
+  <section aria-label="Replicas"><div class="cards" id="cards"></div></section>
+  <div class="lower">
+    <section><h2>Failover timeline</h2><ol class="log" id="log"></ol></section>
+    <section><h2>Provider scores</h2><div class="table" id="scores"></div></section>
+  </div>
+</main>
+
+<script>
+const $ = (id) => document.getElementById(id);
+const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+const short = (a) => a.replace(/^akash1sim\d/, "");
+const shortMsg = (m) => m.replace(/akash1sim\d/g, "");
+
+/* Runs the same rules as backend/hydra/engine.py when no backend is reachable,
+   so the page still demonstrates failover when opened as a standalone link. */
+function createDemo() {
+  const fleet = [["europlots", 1180, .004], ["hurricane", 1240, .002], ["neuron", 1010, .03],
+                 ["tokyonode", 1320, .008], ["saopaulo", 960, .06], ["nordic", 1095, .012]];
+  const history = {};
+  fleet.forEach(([name, price, flake]) => {
+    const probes = 300 + Math.floor(Math.random() * 300);
+    history["akash1sim0" + name] = { name, price, flake, probes, successes: Math.round(probes * (1 - flake)), failures: 0 };
+  });
+  let dseq = 24000000, replicas = [], active = null, recovery = null;
+  const events = [];
+  const log = (kind, message) => events.unshift({ ts: Date.now() / 1000, kind, message });
+  const uptime = (p) => (p.successes + 1) / (p.probes + 2);
+  const score = (p, cheapest) => .7 * uptime(p) + .3 * cheapest / p.price - .1 * p.failures;
+  const cheapest = () => Math.min(...Object.values(history).map((p) => p.price));
+  const deploy = () => {
+    const used = new Set(replicas.map((r) => r.provider));
+    const options = Object.entries(history).filter(([a]) => !used.has(a));
+    const [address, p] = options.sort((a, b) => score(b[1], cheapest()) - score(a[1], cheapest()))[0];
+    dseq += 3 + Math.floor(Math.random() * 37);
+    const r = { id: "r-" + dseq, dseq: String(dseq), provider: address, uri: `${dseq}.${p.name}.sim.akash`, price: p.price,
+                status: "starting", strikes: 0, created_at: Date.now() / 1000, first_failed_at: null, killed: false };
+    replicas.push(r);
+    log("replace", `New replica on ${address} (dseq ${dseq})`);
+  };
+  const route = () => {
+    const current = replicas.find((r) => r.id === active);
+    if (current && current.status !== "dead") return;
+    const healthy = replicas.filter((r) => r.status === "healthy");
+    if (!healthy.length) return;
+    const best = healthy.sort((a, b) => score(history[b.provider], cheapest()) - score(history[a.provider], cheapest()))[0];
+    active = best.id;
+    if (current) {
+      recovery = Date.now() / 1000 - current.first_failed_at;
+      log("failover", `Traffic moved to ${best.provider} in ${recovery.toFixed(1)}s`);
+    } else log("traffic", `Traffic pointed at ${best.provider}`);
+  };
+  const tick = () => {
+    for (const r of replicas) {
+      const p = history[r.provider];
+      const ok = !r.killed && Math.random() >= p.flake;
+      p.probes++; if (ok) p.successes++;
+      if (ok) { r.status = "healthy"; r.strikes = 0; r.first_failed_at = null; continue; }
+      if (r.status === "healthy") log("strike", `${r.provider} failed a health check`);
+      r.strikes++; r.first_failed_at = r.first_failed_at || Date.now() / 1000;
+      r.status = r.strikes >= 3 ? "dead" : "suspect";
+    }
+    route();
+    for (const r of replicas.filter((x) => x.status === "dead")) {
+      history[r.provider].failures++;
+      log("dead", `${r.provider} reached 3 strikes`);
+      log("close", `Closed the lease on deployment ${r.dseq}`);
+    }
+    replicas = replicas.filter((r) => r.status !== "dead");
+    while (replicas.length < 3) deploy();
+    route();
+  };
+  log("deploy", "Keeping 3 replicas on separate providers");
+  while (replicas.length < 3) deploy();
+  tick();
+  setInterval(tick, 2000);
+  return {
+    state: async () => {
+      const c = cheapest(), used = new Set(replicas.map((r) => r.provider));
+      return { mode: "demo", running: true, desired: 3, strikes: 3, domain: "app.example.com", active_id: active,
+        active_uri: (replicas.find((r) => r.id === active) || {}).uri || null, replicas: replicas.map((r) => ({ ...r })),
+        providers: Object.entries(history).map(([address, p]) => ({ address, uptime: uptime(p), score: score(p, c), probes: p.probes,
+          failures: p.failures, price: p.price, in_use: used.has(address) })).sort((a, b) => b.score - a.score),
+        events: events.slice(0, 50), cost_per_day: replicas.reduce((s, r) => s + r.price, 0) * 14400 / 1e6, last_recovery: recovery };
+    },
+    chaos: async (id) => {
+      const live = replicas.filter((r) => !r.killed && (!id || r.id === id));
+      if (!live.length) return;
+      const victim = live[Math.floor(Math.random() * live.length)];
+      victim.killed = true;
+      log("chaos", `Chaos killed the replica on ${victim.provider}`);
+    },
+    deploy: async () => {},
+  };
+}
+
+function createApi() {
+  const post = (path) => fetch(path, { method: "POST" }).then((r) => { if (!r.ok) throw new Error("Request failed"); });
+  return {
+    state: () => fetch("/api/state").then((r) => { if (!r.ok) throw new Error("Request failed"); return r.json(); }),
+    chaos: (id) => post("/api/chaos" + (id ? `?replica_id=${encodeURIComponent(id)}` : "")),
+    deploy: () => post("/api/deploy"),
+  };
+}
+
+const MODE_LABELS = { demo: "browser demo", simulate: "simulator", live: "live on Akash" };
+const TONE = { chaos: "bad", dead: "bad", error: "bad", strike: "warn", failover: "good", replace: "good", traffic: "good" };
+let backend, last = "", current = null;
+
+function render(s) {
+  current = s;
+  const healthy = s.replicas.filter((r) => r.status === "healthy").length;
+  $("mode").textContent = MODE_LABELS[s.mode] || s.mode;
+  $("action").textContent = s.running ? "Chaos: kill a replica" : "Deploy replicas";
+  $("route").innerHTML = `<b>${esc(s.domain)}</b> → ${esc(s.active_uri || "no healthy replica yet")}`;
+  $("stats").innerHTML = [
+    ["Healthy replicas", `${healthy}<small> of ${s.desired}</small>`],
+    ["Last failover", s.last_recovery == null ? "None yet" : `${s.last_recovery.toFixed(1)}<small> s</small>`],
+    ["Estimated cost", `${s.cost_per_day.toFixed(1)}<small> ACT/day</small>`],
+    ["Providers tracked", `${s.providers.length}`],
+  ].map(([k, v]) => `<div><dt>${k}</dt><dd>${v}</dd></div>`).join("");
+  $("cards").innerHTML = s.replicas.map((r) => `
+    <article class="card ${r.id === s.active_id ? "live" : ""} ${r.status}">
+      <div class="top"><span class="name">${esc(short(r.provider))}</span><span class="pill ${r.status}">${r.status}</span></div>
+      <dl class="kv">
+        <dt>dseq</dt><dd>${esc(r.dseq)}</dd>
+        <dt>Price</dt><dd>${Math.round(r.price)} uact/block</dd>
+        <dt>Strikes</dt><dd><span class="pips" role="img" aria-label="${r.strikes} of ${s.strikes} strikes">${
+          Array.from({ length: s.strikes }, (_, i) => `<i class="${i < r.strikes ? "on" : ""}"></i>`).join("")}</span></dd>
+      </dl>
+      <div class="foot"><span class="${r.id === s.active_id ? "traffic" : ""}">${r.id === s.active_id ? "Serving traffic" : "Standby"}</span>
+        <button class="ghost" data-kill="${esc(r.id)}">Kill</button></div>
+    </article>`).join("") || `<p class="sub">No replicas yet. Choose Deploy replicas to start.</p>`;
+  $("log").innerHTML = s.events.map((e) => `<li><time>${new Date(e.ts * 1000).toLocaleTimeString([], { hour12: false })}</time><span class="${TONE[e.kind] || ""}">${esc(shortMsg(e.message))}</span></li>`).join("");
+  $("scores").innerHTML = `<table><thead><tr><th>Provider</th><th>Score</th><th>Uptime</th><th>Failures</th><th>uact/block</th></tr></thead><tbody>${
+    s.providers.map((p) => `<tr><td>${esc(short(p.address))}${p.in_use ? " ●" : ""}</td><td>${p.score.toFixed(2)}</td><td>${(p.uptime * 100).toFixed(1)}%</td><td>${p.failures}</td><td>${Math.round(p.price)}</td></tr>`).join("")
+  }</tbody></table>`;
+}
+
+async function refresh() {
+  try {
+    const s = await backend.state();
+    $("notice").hidden = true;
+    const key = JSON.stringify(s);
+    if (key !== last) { last = key; render(s); }
+  } catch (e) {
+    $("notice").textContent = "Lost contact with the Hydra backend. Check that it is still running.";
+    $("notice").hidden = false;
+  }
+}
+
+async function act(run) {
+  try { await run(); await refresh(); } catch (e) {
+    $("notice").textContent = "That action failed. Check the backend and try again.";
+    $("notice").hidden = false;
+  }
+}
+
+$("action").addEventListener("click", () => act(() => current && current.running ? backend.chaos() : backend.deploy()));
+$("cards").addEventListener("click", (e) => {
+  const id = e.target.dataset && e.target.dataset.kill;
+  if (id) act(() => backend.chaos(id));
+});
+
+(async () => {
+  const api = createApi();
+  try { await api.state(); backend = api; } catch (e) { backend = createDemo(); }
+  await refresh();
+  setInterval(refresh, 1000);
+})();
+</script>
